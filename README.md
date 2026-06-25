@@ -156,6 +156,33 @@ sudo systemctl enable --now opencode-proxy
 |----------|---------|------|
 | `PROXY_PORT` | `6446` | Server port |
 | `KEYS_FILE` | `./api-keys.json` | API keys file path |
+| `SOCKS5_PROXY` | _(none)_ | SOCKS5 proxy address for upstream requests |
+
+## SOCKS5 Proxy
+
+Route all upstream requests to opencode.ai through a SOCKS5 proxy.
+
+### CLI argument
+
+```bash
+node server.mjs --proxy 127.0.0.1:9150
+node server.mjs --proxy socks5://user:pass@10.0.0.1:1080
+```
+
+### Environment variable
+
+```bash
+SOCKS5_PROXY=127.0.0.1:9150 node server.mjs
+SOCKS5_PROXY=socks5://user:pass@10.0.0.1:1080 node server.mjs
+```
+
+CLI `--proxy` takes priority over `SOCKS5_PROXY`. If neither is set, requests go directly.
+
+### systemd with proxy
+
+```ini
+Environment=SOCKS5_PROXY=127.0.0.1:9150
+```
 
 ## How it works
 

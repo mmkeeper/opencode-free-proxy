@@ -2,6 +2,27 @@ import express from "express";
 import crypto from "crypto";
 import https from "https";
 import fs from "fs";
+import { SocksProxyAgent } from "socks-proxy-agent";
+
+// ── SOCKS5 Proxy ──────────────────────────────────────────────────
+function parseProxyArg() {
+  const args = process.argv.slice(2);
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--proxy" && args[i + 1]) return args[i + 1];
+  }
+  return process.env.SOCKS5_PROXY || null;
+}
+
+function normalizeProxyUrl(raw) {
+  if (!raw) return null;
+  if (!raw.startsWith("socks5://") && !raw.startsWith("socks4://")) {
+    return "socks5://" + raw;
+  }
+  return raw;
+}
+
+const proxyUrl = normalizeProxyUrl(parseProxyArg());
+const socksAgent = proxyUrl ? new SocksProxyAgent(proxyUrl) : null;
 
 const app = express();
 app.use(express.json({ limit: "10mb" }));
@@ -86,6 +107,7 @@ function zenRequest(model, messages, stream, tools, tool_choice, sessionId) {
         "x-opencode-session": sessionId,
       },
       timeout: 120000,
+      ...(socksAgent ? { agent: socksAgent } : {}),
     },
   };
 }
@@ -549,12 +571,15 @@ app.post("/v1/messages", async (req, res) => {
 // ── Health ──────────────────────────────────────────────────────────
 app.get("/health", (_req, res) => res.json({
   status: "ok", version: `v${PROXY_VERSION}`, models: MODELS.length,
+  socks5: proxyUrl || null,
   endpoints: ["/v1/chat/completions", "/v1/messages", "/v1/models"],
 }));
 
 // ── Start ──────────────────────────────────────────────────────────
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`OpenCode Free Proxy v${PROXY_VERSION} on http://0.0.0.0:${PORT}`);
+  if (socksAgent) console.log("  SOCKS5 proxy:", proxyUrl);
+  else console.log("  No SOCKS5 proxy configured (use --proxy or SOCKS5_PROXY)");
   console.log("  OpenAI:    POST /v1/chat/completions");
   console.log("  Anthropic: POST /v1/messages");
   console.log("  Models:    GET  /v1/models");
