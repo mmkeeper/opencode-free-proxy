@@ -19,11 +19,11 @@ Done. Server is at `http://localhost:6446`. API keys are in `api-keys.json` (aut
 
 | Model | What it is | Reliability |
 |-------|-----------|-------------|
+| `mimo-v2.5-free` | Xiaomi MiMo v2.5 | Solid |
 | `deepseek-v4-flash-free` | DeepSeek V4 Flash | Solid |
+| `north-mini-code-free` | North Mini Code | Solid |
+| `nemotron-3-ultra-free` | NVIDIA Nemotron 3 Ultra | Solid |
 | `big-pickle` | DeepSeek V4 Flash (alias) | Solid |
-| `minimax-m2.5-free` | MiniMax M2.5 | Solid |
-| `nemotron-3-super-free` | NVIDIA Nemotron 3 Super | Hit or miss |
-| `qwen3.6-plus-free` | Qwen 3.6 Plus | Intermittent |
 
 All models support streaming, tool calls, and system messages.
 
