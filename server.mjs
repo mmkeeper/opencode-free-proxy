@@ -62,13 +62,21 @@ function ocId(prefix) {
   const rnd = crypto.randomBytes(12).toString("base64url").slice(0, 16);
   return `${prefix}_${ts}${rnd}`;
 }
-
+/* // old models
 const MODELS = [
   "deepseek-v4-flash-free",
   "big-pickle",
   "minimax-m2.5-free",
   "nemotron-3-super-free",
   "qwen3.6-plus-free",
+];
+*/
+const MODELS = [
+  "mimo-v2.5-free",
+  "deepseek-v4-flash-free",
+  "north-mini-code-free",
+  "nemotron-3-ultra-free",
+  "big-pickle",
 ];
 
 // Track sessions per user (rotate every 30 min)
