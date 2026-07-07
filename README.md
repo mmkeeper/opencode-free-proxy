@@ -9,8 +9,8 @@ One server — works with any tool that speaks OpenAI or Anthropic format: Curso
 ```bash
 git clone https://github.com/bigdata2211it-web/opencode-free-proxy.git
 cd opencode-free-proxy
-npm install
-node server.mjs
+pip install -r requirements.txt
+python server.py
 ```
 
 Done. Server is at `http://localhost:6446`. API keys are in `api-keys.json` (auto-generated on first run).
@@ -113,10 +113,10 @@ Add to `~/.config/opencode/opencode.json`:
 # On your VPS
 git clone https://github.com/bigdata2211it-web/opencode-free-proxy.git
 cd opencode-free-proxy
-npm install
-node server.mjs          # foreground
+pip install -r requirements.txt
+python server.py          # foreground
 # or
-nohup node server.mjs > proxy.log 2>&1 &   # background
+nohup python server.py > proxy.log 2>&1 &   # background
 ```
 
 If your VPS doesn't expose port 6446, use an SSH tunnel:
@@ -137,7 +137,7 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=/opt/opencode-proxy
-ExecStart=/usr/bin/node server.mjs
+ExecStart=/usr/bin/python3 server.py
 Restart=always
 RestartSec=5
 Environment=PROXY_PORT=6446
@@ -165,15 +165,15 @@ Route all upstream requests to opencode.ai through a SOCKS5 proxy.
 ### CLI argument
 
 ```bash
-node server.mjs --proxy 127.0.0.1:9150
-node server.mjs --proxy socks5://user:pass@10.0.0.1:1080
+python server.py --proxy 127.0.0.1:9150
+python server.py --proxy socks5://user:pass@10.0.0.1:1080
 ```
 
 ### Environment variable
 
 ```bash
-SOCKS5_PROXY=127.0.0.1:9150 node server.mjs
-SOCKS5_PROXY=socks5://user:pass@10.0.0.1:1080 node server.mjs
+SOCKS5_PROXY=127.0.0.1:9150 python server.py
+SOCKS5_PROXY=socks5://user:pass@10.0.0.1:1080 python server.py
 ```
 
 CLI `--proxy` takes priority over `SOCKS5_PROXY`. If neither is set, requests go directly.
