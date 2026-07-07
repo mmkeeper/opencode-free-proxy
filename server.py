@@ -53,7 +53,6 @@ PROXY_VERSION = "9"
 # ── API Keys ──────────────────────────────────────────────────────
 
 API_KEY = args.api_key or os.environ.get("LOCAL_KEY") or os.environ.get("API_KEY")
-load_keys()
 
 
 def auth(request: Request) -> str | None:
