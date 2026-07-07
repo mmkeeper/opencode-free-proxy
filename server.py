@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 import secrets
@@ -10,15 +11,19 @@ import uvicorn
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse, StreamingResponse
 
+# ── CLI args ───────────────────────────────────────────────────────
+
+def parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(description="OpenCode Free Proxy")
+    p.add_argument("--port", type=int, default=None, help="Listen port (default: 6446)")
+    p.add_argument("--host", default=None, help="Listen host (default: 0.0.0.0)")
+    p.add_argument("--proxy", default=None, help="SOCKS5 proxy (socks5://host:port)")
+    p.add_argument("--api-key", default=None, help="API key for client auth")
+    return p.parse_args()
+
+args = parse_args()
+
 # ── SOCKS5 Proxy ──────────────────────────────────────────────────
-
-def parse_proxy_arg() -> str | None:
-    args = sys.argv[1:]
-    for i, arg in enumerate(args):
-        if arg == "--proxy" and i + 1 < len(args):
-            return args[i + 1]
-    return os.environ.get("SOCKS5_PROXY") or None
-
 
 def normalize_proxy_url(raw: str | None) -> str | None:
     if not raw:
@@ -28,10 +33,7 @@ def normalize_proxy_url(raw: str | None) -> str | None:
     return raw
 
 
-PROXY_URL = normalize_proxy_url(parse_proxy_arg())
-PROXY_MOUNT = None
-if PROXY_URL:
-    PROXY_MOUNT = httpx.Mount(proxy=PROXY_URL)
+PROXY_URL = normalize_proxy_url(args.proxy or os.environ.get("SOCKS5_PROXY"))
 
 http_client = httpx.AsyncClient(
     base_url="https://opencode.ai",
@@ -43,42 +45,24 @@ http_client = httpx.AsyncClient(
 
 app = FastAPI()
 
-PORT = int(os.environ.get("PROXY_PORT", "6446"))
+PORT = args.port or int(os.environ.get("PORT", "6446"))
+HOST = args.host or os.environ.get("HOST", "0.0.0.0")
 OC_VERSION = "1.15.0"
 PROXY_VERSION = "9"
 
 # ── API Keys ──────────────────────────────────────────────────────
 
-KEYS_FILE = os.environ.get("KEYS_FILE", "./api-keys.json")
-api_keys: dict[str, str] = {}
-
-
-def load_keys():
-    global api_keys
-    try:
-        with open(KEYS_FILE, "r", encoding="utf-8") as f:
-            api_keys = json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        api_keys = {}
-    if not api_keys:
-        api_keys = {
-            "admin": "oc-" + secrets.token_hex(20),
-            "user-default": "oc-" + secrets.token_hex(20),
-        }
-        with open(KEYS_FILE, "w", encoding="utf-8") as f:
-            json.dump(api_keys, f, indent=2)
-        print(f"[INIT] Generated new API keys -> {KEYS_FILE}")
-
-
+API_KEY = args.api_key or os.environ.get("LOCAL_KEY") or os.environ.get("API_KEY")
 load_keys()
 
 
 def auth(request: Request) -> str | None:
+    if not API_KEY:
+        return "user"
     hdr = request.headers.get("authorization") or request.headers.get("x-api-key") or ""
     tok = hdr[7:] if hdr.startswith("Bearer ") else hdr
-    for name, key in api_keys.items():
-        if tok == key:
-            return name
+    if tok == API_KEY:
+        return "user"
     return None
 
 
@@ -570,7 +554,7 @@ async def health():
 # ── Start ─────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    print(f"OpenCode Free Proxy v{PROXY_VERSION} on http://0.0.0.0:{PORT}")
+    print(f"OpenCode Free Proxy v{PROXY_VERSION} on http://{HOST}:{PORT}")
     if PROXY_URL:
         print(f"  SOCKS5 proxy: {PROXY_URL}")
     else:
@@ -580,7 +564,9 @@ if __name__ == "__main__":
     print("  Models:    GET  /v1/models")
     print("  Health:    GET  /health")
     print(f"  Models: {', '.join(MODELS)}")
-    for name, key in api_keys.items():
-        print(f"  {name:<15} {key}")
+    if API_KEY:
+        print(f"  API key:   {API_KEY[:8]}...")
+    else:
+        print("  API key:   (none - open access)")
 
-    uvicorn.run(app, host="0.0.0.0", port=PORT, log_level="info")
+    uvicorn.run(app, host=HOST, port=PORT, log_level="info")
