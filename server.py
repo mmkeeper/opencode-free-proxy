@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 import httpx
 import uvicorn
 from fastapi import FastAPI, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 
 # ── CLI args ───────────────────────────────────────────────────────
@@ -44,6 +45,14 @@ http_client = httpx.AsyncClient(
 # ── App ───────────────────────────────────────────────────────────
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 PORT = args.port or int(os.environ.get("PORT", "6446"))
 HOST = args.host or os.environ.get("HOST", "0.0.0.0")
