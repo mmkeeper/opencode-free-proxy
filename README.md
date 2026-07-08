@@ -51,13 +51,13 @@ python server.py --port 6446 --host 127.0.0.1 --proxy socks5://127.0.0.1:9150 --
 
 ## What you get
 
-| Model | What it is | Reliability |
-|-------|-----------|-------------|
-| `mimo-v2.5-free` | Xiaomi MiMo v2.5 | Solid |
-| `deepseek-v4-flash-free` | DeepSeek V4 Flash | Solid |
-| `north-mini-code-free` | North Mini Code | Solid |
-| `nemotron-3-ultra-free` | NVIDIA Nemotron 3 Ultra | Solid |
-| `big-pickle` | DeepSeek V4 Flash (alias) | Solid |
+| Model | What it is | Reliability | Works with proxy | Works without proxy |
+|-------|-----------|-------------|------------------|---------------------|
+| `mimo-v2.5-free` | Xiaomi MiMo v2.5 | Solid | ✅ | ✅ |
+| `deepseek-v4-flash-free` | DeepSeek V4 Flash | Solid | ✅ | ✅ |
+| `north-mini-code-free` | North Mini Code | Solid | ✅ | ✅ |
+| `nemotron-3-ultra-free` | NVIDIA Nemotron 3 Ultra | Solid | ✅ | ⚠️ sometimes fails |
+| `big-pickle` | DeepSeek V4 Flash (alias) | Solid | ✅ | ✅ |
 
 All models support streaming, tool calls, and system messages.
 
