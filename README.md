@@ -4,16 +4,50 @@ Free AI models from [OpenCode](https://opencode.ai) exposed as standard OpenAI a
 
 One server — works with any tool that speaks OpenAI or Anthropic format: Cursor, Continue, Cline, Claude Code, aider, opencode CLI, raw `curl`, whatever.
 
+## Related projects
+
+All three projects share the same CLI interface (`--port`, `--host`, `--proxy`, `--api-key`) and work together through [llama-swap](https://github.com/mmkeeper/llama-swap):
+
+| Project | Port | What |
+|---------|------|------|
+| [opencode-free-proxy](https://github.com/mmkeeper/opencode-free-proxy) | 6446 | OpenCode free models (this) |
+| [deepseek-free-api](https://github.com/mmkeeper/deepseek-free-api) | 18632 | DeepSeek free API |
+| [mimo-free-proxy](https://github.com/mmkeeper/mimo-free-proxy) | 8788 | Xiaomi MiMo free API |
+
 ## 30-second setup
 
 ```bash
-git clone https://github.com/bigdata2211it-web/opencode-free-proxy.git
+git clone https://github.com/mmkeeper/opencode-free-proxy.git
 cd opencode-free-proxy
 pip install -r requirements.txt
 python server.py
 ```
 
 Done. Server is at `http://localhost:6446`. API keys are in `api-keys.json` (auto-generated on first run).
+
+## CLI arguments
+
+All projects use the same CLI interface:
+
+```bash
+python server.py --port 6446 --host 127.0.0.1 --proxy socks5://127.0.0.1:9150 --api-key sk-my-key
+```
+
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `--port` | `6446` | Listen port |
+| `--host` | `127.0.0.1` | Listen host |
+| `--proxy` | _(none)_ | SOCKS5 proxy (e.g. `socks5://127.0.0.1:9150`) |
+| `--api-key` | _(from api-keys.json)_ | API key for client auth |
+
+## Environment variables
+
+| Variable | Default | What |
+|----------|---------|------|
+| `PROXY_PORT` | `6446` | Server port |
+| `HOST` | `127.0.0.1` | Listen host |
+| `KEYS_FILE` | `./api-keys.json` | API keys file path |
+| `SOCKS5_PROXY` | _(none)_ | SOCKS5 proxy address for upstream requests |
 
 ## What you get
 
@@ -150,14 +184,6 @@ WantedBy=multi-user.target
 sudo systemctl enable --now opencode-proxy
 ```
 
-## Environment variables
-
-| Variable | Default | What |
-|----------|---------|------|
-| `PROXY_PORT` | `6446` | Server port |
-| `KEYS_FILE` | `./api-keys.json` | API keys file path |
-| `SOCKS5_PROXY` | _(none)_ | SOCKS5 proxy address for upstream requests |
-
 ## SOCKS5 Proxy
 
 Route all upstream requests to opencode.ai through a SOCKS5 proxy.
@@ -183,6 +209,10 @@ CLI `--proxy` takes priority over `SOCKS5_PROXY`. If neither is set, requests go
 ```ini
 Environment=SOCKS5_PROXY=127.0.0.1:9150
 ```
+
+## llama-swap integration
+
+This server works with [llama-swap](https://github.com/mmkeeper/llama-swap) as a peer. See `config.yaml` in the llama-swap repo for an example.
 
 ## How it works
 
