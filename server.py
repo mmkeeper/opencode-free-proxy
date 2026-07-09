@@ -74,11 +74,11 @@ def oc_id(prefix: str) -> str:
 
 
 MODELS = [
-    "mimo-v2.5-free",
-    "deepseek-v4-flash-free",
-    "north-mini-code-free",
-    "nemotron-3-ultra-free",
-    "big-pickle",
+    "ocf-mimo-v2.5-free",
+    "ocf-deepseek-v4-flash-free",
+    "ocf-north-mini-code-free",
+    "ocf-nemotron-3-ultra-free",
+    "ocf-big-pickle",
 ]
 
 # Session per conversation (hash-based lookup)
@@ -123,8 +123,12 @@ def get_session(user: str, messages: list[dict]) -> str:
 
 # ── Zen API transport ─────────────────────────────────────────────
 
+def strip_prefix(model: str) -> str:
+    return model[4:] if model.startswith("ocf-") else model
+
+
 def zen_request(model, messages, stream, tools, tool_choice, session_id):
-    req_body: dict = {"model": model, "messages": messages, "stream": bool(stream)}
+    req_body: dict = {"model": strip_prefix(model), "messages": messages, "stream": bool(stream)}
     if tools:
         req_body["tools"] = tools
     if tool_choice:
