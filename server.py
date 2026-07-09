@@ -81,21 +81,32 @@ MODELS = [
     "big-pickle",
 ]
 
-# Session per conversation (hash of previous messages)
+# Session per conversation (hash of conversation start)
 import hashlib
 
 
 def get_session(user: str, messages: list[dict]) -> str:
-    # Hash all messages except the last (the current user turn)
-    # This gives a stable ID for the same conversation history
-    key_parts = []
-    for m in (messages or [])[:-1]:
-        role = m.get("role", "")
-        content = m.get("content") or ""
-        if isinstance(content, list):
-            content = json.dumps(content)
-        key_parts.append(f"{role}:{content}")
-    h = hashlib.sha256("|".join(key_parts).encode()).hexdigest()[:16]
+    # Hash system prompt + first user message to identify the conversation
+    # This stays stable as the conversation grows
+    parts = []
+    for m in (messages or []):
+        if m.get("role") == "system":
+            content = m.get("content") or ""
+            if isinstance(content, list):
+                content = json.dumps(content)
+            parts.append(f"sys:{content}")
+            break
+    for m in (messages or []):
+        if m.get("role") == "user":
+            content = m.get("content") or ""
+            if isinstance(content, list):
+                content = json.dumps(content)
+            parts.append(f"usr:{content}")
+            break
+    if not parts:
+        # Fallback: empty hash → new session
+        parts = ["empty"]
+    h = hashlib.sha256("|".join(parts).encode()).hexdigest()[:16]
     return f"ses_{h}"
 
 
