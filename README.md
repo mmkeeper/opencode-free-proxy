@@ -8,11 +8,11 @@ One server — works with any tool that speaks OpenAI or Anthropic format: Curso
 
 All three projects share the same CLI interface (`--port`, `--host`, `--proxy`, `--api-key`) and work together through [llama-swap](https://github.com/mmkeeper/llama-swap):
 
-| Project | Port | What |
-|---------|------|------|
-| [opencode-free-proxy](https://github.com/mmkeeper/opencode-free-proxy) | 6446 | OpenCode free models (this) |
-| [deepseek-free-api](https://github.com/mmkeeper/deepseek-free-api) | 18632 | DeepSeek free API |
-| [mimo-free-proxy](https://github.com/mmkeeper/mimo-free-proxy) | 8788 | Xiaomi MiMo free API |
+| Project | Port | Prefix | What |
+|---------|------|--------|------|
+| [opencode-free-proxy](https://github.com/mmkeeper/opencode-free-proxy) | 6446 | `ocf-` | OpenCode free models (this) |
+| [deepseek-free-api](https://github.com/mmkeeper/deepseek-free-api) | 18632 | `dsf-` | DeepSeek free API |
+| [mimo-free-proxy](https://github.com/mmkeeper/mimo-free-proxy) | 8788 | `mcf-` | Xiaomi MiMo free API |
 
 ## 30-second setup
 
