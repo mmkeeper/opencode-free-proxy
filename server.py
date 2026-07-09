@@ -8,6 +8,13 @@ from datetime import datetime, timezone
 
 import httpx
 import uvicorn
+
+
+def log(*a):
+    msg = f"[{time.strftime('%H:%M:%S')}] " + " ".join(str(x) for x in a)
+    print(msg, flush=True)
+    with open("proxy.log", "a", encoding="utf-8") as f:
+        f.write(msg + "\n")
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse, StreamingResponse
 
@@ -110,14 +117,14 @@ def get_session(user: str, messages: list[dict]) -> str:
         if h in sessions:
             full_h = _hash_messages(messages)
             sessions[full_h] = sessions[h]
-            print(f"[SESSION] match prefix={n}/{len(messages)} -> {sessions[h]}", flush=True)
+            log(f"SESSION match prefix={n}/{len(messages)} -> {sessions[h]}")
             return sessions[h]
 
     # No match — new session
     new_id = f"ses_{oc_id('ses')}"
     full_h = _hash_messages(messages)
     sessions[full_h] = new_id
-    print(f"[SESSION] new {new_id} (msgs={len(messages)})", flush=True)
+    log(f"SESSION new {new_id} (msgs={len(messages)})")
     return new_id
 
 
@@ -309,6 +316,8 @@ async def chat_completions(request: Request):
     tools = body.get("tools")
     tool_choice = body.get("tool_choice")
 
+    log(f"REQUEST model={model} stream={stream} msgs={len(messages or [])} tools={len(tools or [])}")
+
     if model not in MODELS:
         return JSONResponse(
             status_code=400,
@@ -355,7 +364,7 @@ async def chat_completions(request: Request):
 
 
 async def stream_openai(req_body: dict, headers: dict):
-    print(f"[STREAM] session={headers.get('x-opencode-session')} model={req_body.get('model')} msgs={len(req_body.get('messages', []))}", flush=True)
+    log(f"STREAM session={headers.get('x-opencode-session')} model={req_body.get('model')} msgs={len(req_body.get('messages', []))}")
     async with http_client.stream("POST", "/zen/v1/chat/completions", json=req_body, headers=headers) as resp:
         if resp.status_code == 429:
             try:
@@ -364,24 +373,36 @@ async def stream_openai(req_body: dict, headers: dict):
                 err_msg = (data.get("error") or {}).get("message") or "Rate limit exceeded"
             except Exception:
                 err_msg = "Rate limit exceeded"
-            print(f"[STREAM] 429: {err_msg}", flush=True)
+            log(f"STREAM 429: {err_msg}")
             yield f'data: {json.dumps({"error": {"message": err_msg + " (free model rate limit)", "type": "rate_limit_error", "code": "rate_limit_exceeded"}})}\n\n'
             return
 
         if resp.status_code >= 400:
             raw = await resp.aread()
-            print(f"[STREAM] error {resp.status_code}: {raw[:500]}", flush=True)
+            log(f"STREAM error {resp.status_code}: {raw[:500]}")
             yield f'data: {json.dumps({"error": {"message": f"Upstream error {resp.status_code}", "type": "upstream_error"}})}\n\n'
             return
 
         chunk_count = 0
+        first_chunks = []
+        last_chunks = []
         async for line in resp.aiter_lines():
             if line:
+                # Skip SSE comments (lines starting with :)
+                if line.startswith(":"):
+                    continue
                 chunk_count += 1
-                yield line + "\n"
+                yield line + "\n\n"
+                if chunk_count <= 3:
+                    first_chunks.append(line[:200])
                 if line.strip() == "data: [DONE]":
                     break
-        print(f"[STREAM] done: {chunk_count} chunks", flush=True)
+                last_chunks.append(line[:200])
+                if len(last_chunks) > 5:
+                    last_chunks.pop(0)
+        log(f"STREAM done: {chunk_count} chunks")
+        log(f"  first: {first_chunks}")
+        log(f"  last: {last_chunks}")
 
 
 # ── Routes: Anthropic Messages format ─────────────────────────────
