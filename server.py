@@ -108,15 +108,16 @@ def get_session(user: str, messages: list[dict]) -> str:
     for n in range(len(messages), 0, -1):
         h = _hash_messages(messages[:n])
         if h in sessions:
-            # Found! Also store current full hash for faster future lookup
             full_h = _hash_messages(messages)
             sessions[full_h] = sessions[h]
+            print(f"[SESSION] match prefix={n}/{len(messages)} -> {sessions[h]}", flush=True)
             return sessions[h]
 
     # No match — new session
     new_id = f"ses_{oc_id('ses')}"
     full_h = _hash_messages(messages)
     sessions[full_h] = new_id
+    print(f"[SESSION] new {new_id} (msgs={len(messages)})", flush=True)
     return new_id
 
 
@@ -350,6 +351,7 @@ async def chat_completions(request: Request):
 
 
 async def stream_openai(req_body: dict, headers: dict):
+    print(f"[STREAM] session={headers.get('x-opencode-session')} model={req_body.get('model')} msgs={len(req_body.get('messages', []))}", flush=True)
     async with http_client.stream("POST", "/zen/v1/chat/completions", json=req_body, headers=headers) as resp:
         if resp.status_code == 429:
             try:
@@ -358,12 +360,24 @@ async def stream_openai(req_body: dict, headers: dict):
                 err_msg = (data.get("error") or {}).get("message") or "Rate limit exceeded"
             except Exception:
                 err_msg = "Rate limit exceeded"
+            print(f"[STREAM] 429: {err_msg}", flush=True)
             yield f'data: {json.dumps({"error": {"message": err_msg + " (free model rate limit)", "type": "rate_limit_error", "code": "rate_limit_exceeded"}})}\n\n'
             return
 
+        if resp.status_code >= 400:
+            raw = await resp.aread()
+            print(f"[STREAM] error {resp.status_code}: {raw[:500]}", flush=True)
+            yield f'data: {json.dumps({"error": {"message": f"Upstream error {resp.status_code}", "type": "upstream_error"}})}\n\n'
+            return
+
+        chunk_count = 0
         async for line in resp.aiter_lines():
             if line:
+                chunk_count += 1
                 yield line + "\n"
+                if line.strip() == "data: [DONE]":
+                    break
+        print(f"[STREAM] done: {chunk_count} chunks", flush=True)
 
 
 # ── Routes: Anthropic Messages format ─────────────────────────────
