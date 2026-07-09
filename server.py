@@ -81,33 +81,43 @@ MODELS = [
     "big-pickle",
 ]
 
-# Session per conversation (hash of conversation start)
+# Session per conversation (hash-based lookup)
 import hashlib
+
+# {user: {hash_of_messages: server_session_id}}
+_user_sessions: dict[str, dict[str, str]] = {}
+
+
+def _hash_messages(messages: list[dict]) -> str:
+    parts = []
+    for m in (messages or []):
+        role = m.get("role", "")
+        content = m.get("content") or ""
+        if isinstance(content, list):
+            content = json.dumps(content, ensure_ascii=False)
+        parts.append(f"{role}:{content}")
+    return hashlib.sha256("||".join(parts).encode()).hexdigest()[:16]
 
 
 def get_session(user: str, messages: list[dict]) -> str:
-    # Hash system prompt + first user message to identify the conversation
-    # This stays stable as the conversation grows
-    parts = []
-    for m in (messages or []):
-        if m.get("role") == "system":
-            content = m.get("content") or ""
-            if isinstance(content, list):
-                content = json.dumps(content)
-            parts.append(f"sys:{content}")
-            break
-    for m in (messages or []):
-        if m.get("role") == "user":
-            content = m.get("content") or ""
-            if isinstance(content, list):
-                content = json.dumps(content)
-            parts.append(f"usr:{content}")
-            break
-    if not parts:
-        # Fallback: empty hash → new session
-        parts = ["empty"]
-    h = hashlib.sha256("|".join(parts).encode()).hexdigest()[:16]
-    return f"ses_{h}"
+    if user not in _user_sessions:
+        _user_sessions[user] = {}
+    sessions = _user_sessions[user]
+
+    # Check hashes from longest prefix to shortest
+    for n in range(len(messages), 0, -1):
+        h = _hash_messages(messages[:n])
+        if h in sessions:
+            # Found! Also store current full hash for faster future lookup
+            full_h = _hash_messages(messages)
+            sessions[full_h] = sessions[h]
+            return sessions[h]
+
+    # No match — new session
+    new_id = f"ses_{oc_id('ses')}"
+    full_h = _hash_messages(messages)
+    sessions[full_h] = new_id
+    return new_id
 
 
 # ── Zen API transport ─────────────────────────────────────────────
