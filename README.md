@@ -61,6 +61,17 @@ python server.py --port 6446 --host 127.0.0.1 --proxy socks5://127.0.0.1:9150 --
 
 All models support streaming, tool calls, and system messages.
 
+### Model name aliases (opencode CLI / Hermes)
+
+When using the proxy with tools that support provider-prefixed model names (opencode CLI, Hermes), use the `ocf-` prefix:
+
+| Tool format | Actual model sent to upstream |
+|-------------|------------------------------|
+| `ocf-mimo-v2.5-free` | `mimo-v2.5-free` |
+| `ocf-deepseek-v4-flash-free` | `deepseek-v4-flash-free` |
+
+The `ocf-` prefix is stripped before forwarding to opencode.ai, so multiple providers (mimo-free-proxy, opencode-free-proxy) can coexist without model name conflicts.
+
 ## API
 
 ### OpenAI format — `POST /v1/chat/completions`
@@ -225,6 +236,14 @@ Your tool (Cursor, CLI, curl, etc.)
         ▼  HTTPS
   opencode.ai/zen/v1/       ← free tier API
 ```
+
+### Session persistence
+
+The proxy maintains conversation sessions automatically. It uses a hash of the message prefix to identify which upstream session to reuse, so multi-turn conversations stay coherent without the client managing session IDs.
+
+### Model prefix (`ocf-`)
+
+All models are exposed with an `ocf-` prefix (e.g. `ocf-mimo-v2.5-free`) to avoid conflicts with other providers in tools like Hermes. The prefix is stripped before forwarding to opencode.ai.
 
 The proxy adds `x-opencode-*` authentication headers that the Zen API requires. These were discovered by reverse engineering the opencode binary — without them, even `Authorization: Bearer public` gets rejected with `AuthError`.
 
