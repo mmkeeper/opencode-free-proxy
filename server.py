@@ -81,15 +81,22 @@ MODELS = [
     "big-pickle",
 ]
 
-# Track sessions per user (rotate every 30 min)
-user_sessions: dict[str, dict] = {}
+# Session per conversation (hash of previous messages)
+import hashlib
 
 
-def get_session(user: str) -> str:
-    now = time.time() * 1000
-    if user not in user_sessions or now - user_sessions[user]["ts"] > 30 * 60 * 1000:
-        user_sessions[user] = {"id": oc_id("ses"), "ts": now}
-    return user_sessions[user]["id"]
+def get_session(user: str, messages: list[dict]) -> str:
+    # Hash all messages except the last (the current user turn)
+    # This gives a stable ID for the same conversation history
+    key_parts = []
+    for m in (messages or [])[:-1]:
+        role = m.get("role", "")
+        content = m.get("content") or ""
+        if isinstance(content, list):
+            content = json.dumps(content)
+        key_parts.append(f"{role}:{content}")
+    h = hashlib.sha256("|".join(key_parts).encode()).hexdigest()[:16]
+    return f"ses_{h}"
 
 
 # ── Zen API transport ─────────────────────────────────────────────
@@ -282,7 +289,7 @@ async def chat_completions(request: Request):
             content={"error": {"message": f"Unknown model: {model}. Available: {', '.join(MODELS)}"}},
         )
 
-    session_id = get_session(user)
+    session_id = get_session(user, messages)
     msg_summary = [
         {"role": m.get("role"), "len": len(m.get("content") if isinstance(m.get("content"), str) else json.dumps(m.get("content") or ""))}
         for m in (messages or [])
@@ -359,8 +366,8 @@ async def messages(request: Request):
             content={"type": "error", "error": {"type": "invalid_request_error", "message": f"Unknown model: {model}. Available: {', '.join(MODELS)}"}},
         )
 
-    session_id = get_session(user)
     oai_messages, tools = anthropic_to_openai(body)
+    session_id = get_session(user, oai_messages)
     input_tokens = len(json.dumps(oai_messages)) // 4
 
     ts = datetime.now(timezone.utc).isoformat()
